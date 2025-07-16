@@ -39,9 +39,9 @@ quic:
   maxIncomingUniStreams: 512
 
 # 可选日志配置
-log:
-  level: info
-  file: /var/log/hysteria.log
+# log:
+#   level: info
+#   file: /var/log/hysteria.log
 EOF
 
 # 写入 systemd 启动服务配置
@@ -80,6 +80,24 @@ EOF
 # 应用内核参数
 sysctl -p
 
+# 提取 IPv6 地址（取第一个全局 IPv6）
+IPV6=$(ip -6 addr show scope global | grep inet6 | head -n1 | awk '{print $2}' | cut -d'/' -f1)
+
+# 提取端口号
+PORT=$(grep '^listen:' /etc/hysteria/config.yaml | awk -F: '{print $NF}' | tr -d ' ')
+
+# 提取认证密码
+PASSWORD=$(awk '/^auth:/,/^$/{if($1=="password:"){print $2}}' /etc/hysteria/config.yaml)
+
+systemctl status hysteria --no-pager
+
+# 拼接输出
+echo -e "\n客户端连接信息："
+echo "[$IPV6]:$PORT@$PASSWORD"
+
+# 输出状态
+
 # 输出状态
 echo -e "\n✅ Hysteria2 已部署完毕，使用端口 443，自签 TLS，已开启高并发优化。"
 systemctl status hysteria --no-pager
+
