@@ -67,14 +67,22 @@ systemctl restart hysteria
 # 优化系统内核参数（UDP & 高并发）
 cat >> /etc/sysctl.conf <<EOF
 
-# Hysteria2 性能优化参数
-net.core.rmem_max = 67108864
-net.core.wmem_max = 67108864
-fs.file-max = 1048576
-fs.nr_open = 1048576
-net.netfilter.nf_conntrack_max = 262144
+net.core.rmem_max = 8388608
+net.core.wmem_max = 8388608
+fs.file-max = 131072
+fs.nr_open = 131072
+net.netfilter.nf_conntrack_max = 32768
 net.ipv4.tcp_tw_reuse = 1
 net.ipv4.ip_local_port_range = 1024 65000
+
+# IPv6 优化参数
+net.ipv6.conf.all.forwarding = 1
+net.ipv6.conf.default.forwarding = 1
+net.ipv6.neigh.default.gc_thresh1 = 1024
+net.ipv6.neigh.default.gc_thresh2 = 2048
+net.ipv6.neigh.default.gc_thresh3 = 4096
+net.ipv6.icmp.ratelimit = 1000
+net.ipv6.route.flush = 1
 EOF
 
 # 应用内核参数
