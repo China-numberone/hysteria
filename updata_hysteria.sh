@@ -31,12 +31,12 @@ masquerade:
     rewriteHost: true
 
 quic:
-  initStreamReceiveWindow: 8388608
-  maxStreamReceiveWindow: 33554432
-  initConnReceiveWindow: 8388608
-  maxConnReceiveWindow: 33554432
-  maxIncomingStreams: 1024
-  maxIncomingUniStreams: 512
+  initStreamReceiveWindow: 4194304      # 4MB
+  maxStreamReceiveWindow: 16777216      # 16MB
+  initConnReceiveWindow: 4194304        # 4MB
+  maxConnReceiveWindow: 16777216        # 16MB
+  maxIncomingStreams: 512
+  maxIncomingUniStreams: 256
 
 # 可选日志配置
 # log:
