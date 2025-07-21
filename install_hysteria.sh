@@ -53,7 +53,7 @@ After=network.target
 [Service]
 ExecStart=/usr/local/bin/hysteria server --config /etc/hysteria/config.yaml
 Restart=always
-LimitNOFILE=1048576
+LimitNOFILE=65535
 
 [Install]
 WantedBy=multi-user.target
