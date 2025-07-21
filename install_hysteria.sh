@@ -31,12 +31,13 @@ masquerade:
     rewriteHost: true
 
 quic:
-  initStreamReceiveWindow: 2097152       # 2MB
-  maxStreamReceiveWindow: 4194304        # 4MB
-  initConnReceiveWindow: 4194304         # 4MB
-  maxConnReceiveWindow: 8388608          # 8MB
-  maxIncomingStreams: 128
-  maxIncomingUniStreams: 64
+  initStreamReceiveWindow: 512000      # 0.5MB
+  maxStreamReceiveWindow: 1048576      # 1MB
+  initConnReceiveWindow: 1048576       # 1MB
+  maxConnReceiveWindow: 2097152        # 2MB
+  maxIncomingStreams: 64
+  maxIncomingUniStreams: 32
+
 
 # 可选日志配置
 # log:
@@ -67,11 +68,12 @@ systemctl restart hysteria
 # 优化系统内核参数（UDP & 高并发）
 cat >> /etc/sysctl.conf <<EOF
 
-net.core.rmem_max = 8388608
-net.core.wmem_max = 8388608
-fs.file-max = 131072
-fs.nr_open = 131072
-net.netfilter.nf_conntrack_max = 32768
+net.core.rmem_max = 4194304   # 4MB
+net.core.wmem_max = 4194304   # 4MB
+fs.file-max = 65536
+fs.nr_open = 65536
+net.netfilter.nf_conntrack_max = 16384
+
 net.ipv4.tcp_tw_reuse = 1
 net.ipv4.ip_local_port_range = 1024 65000
 
