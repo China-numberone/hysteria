@@ -31,9 +31,9 @@ masquerade:
     protocol: https                   # 伪装协议类型，可为 http/https/ws/wss 等
 
 quic:
-  initStreamReceiveWindow: 512000      # 单个流初始接收窗口（0.5MB）
+  initStreamReceiveWindow: 4096000      # 单个流初始接收窗口（4MB）
   maxStreamReceiveWindow: 6144000      # 单个流最大接收窗口（6MB）
-  initConnReceiveWindow: 512000        # 整体连接初始接收窗口（0.5MB）
+  initConnReceiveWindow: 4096000        # 整体连接初始接收窗口（4MB）
   maxConnReceiveWindow: 6144000        # 整体连接最大接收窗口（6MB）
   maxIncomingStreams: 128              # 最大双向流数量
   maxIncomingUniStreams: 128           # 最大单向流数量
