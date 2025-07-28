@@ -86,19 +86,11 @@ net.ipv6.icmp.ratelimit = 1000
 # UDP 网络缓冲区提升，减少丢包
 net.core.rmem_max = 16777216
 net.core.wmem_max = 16777216
-
 net.core.rmem_default = 262144
 net.core.wmem_default = 262144
 
 # 网络接收队列长度
 net.core.netdev_max_backlog = 5000
-
-# UDP 内存缓冲池（ipv4参数，仍有帮助）
-net.ipv4.udp_mem = 65536 131072 262144
-
-# TCP快速重用端口
-net.ipv4.tcp_tw_reuse = 1
-net.ipv4.tcp_fin_timeout = 30
 
 EOF
 
