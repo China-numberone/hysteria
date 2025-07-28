@@ -13,36 +13,31 @@ openssl req -x509 -newkey rsa:2048 -sha256 -days 3650 -nodes \
 
 # 写入配置文件（启用高并发 & 性能优化）
 cat > /etc/hysteria/config.yaml <<EOF
-listen: '[::]:443'
-protocol: udp
+listen: '[::]:443'  # 监听地址与端口（IPv6 + IPv4）
 
 auth:
   type: password
-  password: 123456
+  password: 123456  # 支持多个密码时可写成列表
 
 tls:
-  cert: /etc/hysteria/cert.pem
-  key: /etc/hysteria/key.pem
+  cert: /etc/hysteria/cert.pem        # TLS 证书路径（全链）
+  key: /etc/hysteria/key.pem          # TLS 私钥路径
 
 masquerade:
   type: proxy
   proxy:
-    url: https://www.bilibili.com
-    rewriteHost: true
+    url: https://www.bilibili.com     # 伪装目标网站
+    rewriteHost: true                 # 是否重写 Host
+    protocol: https                   # 伪装协议类型，可为 http/https/ws/wss 等
 
 quic:
-  initStreamReceiveWindow: 512000      # 0.5MB
-  maxStreamReceiveWindow: 1048576      # 1MB
-  initConnReceiveWindow: 1048576       # 1MB
-  maxConnReceiveWindow: 2097152        # 2MB
-  maxIncomingStreams: 64
-  maxIncomingUniStreams: 32
-
-
-# 可选日志配置
-# log:
-#   level: info
-#   file: /var/log/hysteria.log
+  initStreamReceiveWindow: 512000      # 单个流初始接收窗口（0.5MB）
+  maxStreamReceiveWindow: 6144000      # 单个流最大接收窗口（6MB）
+  initConnReceiveWindow: 512000        # 整体连接初始接收窗口（0.5MB）
+  maxConnReceiveWindow: 6144000        # 整体连接最大接收窗口（6MB）
+  maxIncomingStreams: 128              # 最大双向流数量
+  maxIncomingUniStreams: 128           # 最大单向流数量
+  
 EOF
 
 # 写入 systemd 启动服务配置
@@ -55,9 +50,13 @@ After=network.target
 ExecStart=/usr/local/bin/hysteria server --config /etc/hysteria/config.yaml
 Restart=always
 LimitNOFILE=65535
+CPUSchedulingPolicy=rr
+CPUSchedulingPriority=10
+CPUAffinity=0-3
 
 [Install]
 WantedBy=multi-user.target
+
 EOF
 
 # 加载 systemd 服务并启动
@@ -68,23 +67,39 @@ systemctl restart hysteria
 # 优化系统内核参数（UDP & 高并发）
 cat >> /etc/sysctl.conf <<EOF
 
-net.core.rmem_max = 4194304   # 4MB
-net.core.wmem_max = 4194304   # 4MB
 fs.file-max = 65536
 fs.nr_open = 65536
 net.netfilter.nf_conntrack_max = 16384
 
-net.ipv4.tcp_tw_reuse = 1
-net.ipv4.ip_local_port_range = 1024 65000
-
-# IPv6 优化参数
+# IPv6转发开启
 net.ipv6.conf.all.forwarding = 1
 net.ipv6.conf.default.forwarding = 1
+
+# IPv6邻居缓存阈值，防止邻居缓存表溢出
 net.ipv6.neigh.default.gc_thresh1 = 1024
 net.ipv6.neigh.default.gc_thresh2 = 2048
 net.ipv6.neigh.default.gc_thresh3 = 4096
+
+# IPv6 ICMP 限速
 net.ipv6.icmp.ratelimit = 1000
-net.ipv6.route.flush = 1
+
+# UDP 网络缓冲区提升，减少丢包
+net.core.rmem_max = 16777216
+net.core.wmem_max = 16777216
+
+net.core.rmem_default = 262144
+net.core.wmem_default = 262144
+
+# 网络接收队列长度
+net.core.netdev_max_backlog = 5000
+
+# UDP 内存缓冲池（ipv4参数，仍有帮助）
+net.ipv4.udp_mem = 65536 131072 262144
+
+# TCP快速重用端口
+net.ipv4.tcp_tw_reuse = 1
+net.ipv4.tcp_fin_timeout = 30
+
 EOF
 
 # 应用内核参数
