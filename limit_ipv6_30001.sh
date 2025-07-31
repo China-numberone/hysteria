@@ -8,6 +8,16 @@ RATE="50mbit"
 CLASSID="10"
 MARK="10"
 
+echo "=== 检查 ip6tables 是否存在 ==="
+if ! command -v ip6tables >/dev/null 2>&1; then
+    echo "未安装 ip6tables，正在尝试安装..."
+    apt update && apt install -y iptables || {
+        echo "❌ 安装 ip6tables 失败，请手动安装后重试。"
+        exit 1
+    }
+fi
+
+
 echo "=== 清除旧规则 ==="
 tc qdisc del dev $IFACE root 2>/dev/null || true
 tc qdisc del dev $IFACE ingress 2>/dev/null || true
