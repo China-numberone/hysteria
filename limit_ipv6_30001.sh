@@ -1,56 +1,41 @@
 #!/bin/bash
-set -e
 
 IFACE="eth0"
 PORT=30001
 RATE="50mbit"
-CLASSID="10"
-MARK=10
 
-echo "=== 检查并安装 ip6tables ==="
-if ! command -v ip6tables >/dev/null 2>&1; then
-    echo "未检测到 ip6tables，尝试强制安装 iptables..."
-    apt-get update -y
-    apt-get install -y --force-yes iptables || {
-        echo "❌ 安装 iptables 失败，请手动安装。"
-        exit 1
-    }
-fi
+# 清理旧规则
+tc qdisc del dev $IFACE root 2>/dev/null
+tc qdisc del dev $IFACE ingress 2>/dev/null
+tc qdisc del dev ifb0 root 2>/dev/null
+ip link set dev ifb0 down 2>/dev/null
 
-echo "=== 清除旧规则 ==="
-tc qdisc del dev $IFACE root 2>/dev/null || true
-tc qdisc del dev $IFACE ingress 2>/dev/null || true
-tc qdisc del dev ifb0 root 2>/dev/null || true
-ip link set dev ifb0 down 2>/dev/null || true
-
-ip6tables -t mangle -D OUTPUT -p tcp --dport $PORT -j MARK --set-mark $MARK 2>/dev/null || true
-ip6tables -t mangle -D OUTPUT -p udp --dport $PORT -j MARK --set-mark $MARK 2>/dev/null || true
-ip6tables -t mangle -D INPUT -p tcp --sport $PORT -j MARK --set-mark $MARK 2>/dev/null || true
-ip6tables -t mangle -D INPUT -p udp --sport $PORT -j MARK --set-mark $MARK 2>/dev/null || true
-
-echo "=== 加载 ifb 模块并启用 ==="
-modprobe ifb || true
+# 加载 ifb模块并启用ifb0
+modprobe ifb
 ip link set dev ifb0 up
 
-echo "=== 添加 ip6tables 打标 ==="
-ip6tables -t mangle -A OUTPUT -p tcp --dport $PORT -j MARK --set-mark $MARK
-ip6tables -t mangle -A OUTPUT -p udp --dport $PORT -j MARK --set-mark $MARK
-ip6tables -t mangle -A INPUT -p tcp --sport $PORT -j MARK --set-mark $MARK
-ip6tables -t mangle -A INPUT -p udp --sport $PORT -j MARK --set-mark $MARK
-
 echo "=== 设置出站限速 ==="
-tc qdisc add dev $IFACE root handle 1: htb default 9999
+tc qdisc add dev $IFACE root handle 1: htb default 10
 tc class add dev $IFACE parent 1: classid 1:1 htb rate $RATE ceil $RATE
-tc class add dev $IFACE parent 1:1 classid 1:$CLASSID htb rate $RATE ceil $RATE
-tc filter add dev $IFACE parent 1:0 protocol ipv6 prio 1 handle $MARK fw flowid 1:$CLASSID
+tc class add dev $IFACE parent 1:1 classid 1:10 htb rate $RATE ceil $RATE
 
-echo "=== 设置入站限速（借助 ifb0）==="
+# 出站过滤：IPv6 tcp/udp目标端口30001流量限速
+tc filter add dev $IFACE protocol ipv6 parent 1: prio 1 flower dst_port $PORT ip_proto tcp flowid 1:10
+tc filter add dev $IFACE protocol ipv6 parent 1: prio 2 flower dst_port $PORT ip_proto udp flowid 1:10
+
+echo "=== 设置入站限速（通过 ifb0） ==="
+# 设置 ingress qdisc，镜像入站流量到 ifb0
 tc qdisc add dev $IFACE handle ffff: ingress
-tc filter add dev $IFACE parent ffff: protocol ipv6 prio 1 handle $MARK fw action mirred egress redirect dev ifb0
+tc filter add dev $IFACE parent ffff: protocol ipv6 prio 1 flower src_port $PORT ip_proto tcp action mirred egress redirect dev ifb0
+tc filter add dev $IFACE parent ffff: protocol ipv6 prio 2 flower src_port $PORT ip_proto udp action mirred egress redirect dev ifb0
 
-tc qdisc add dev ifb0 root handle 1: htb default 9999
+# ifb0 限速设置
+tc qdisc add dev ifb0 root handle 1: htb default 10
 tc class add dev ifb0 parent 1: classid 1:1 htb rate $RATE ceil $RATE
-tc class add dev ifb0 parent 1:1 classid 1:$CLASSID htb rate $RATE ceil $RATE
-tc filter add dev ifb0 parent 1:0 protocol ipv6 prio 1 handle $MARK fw flowid 1:$CLASSID
+tc class add dev ifb0 parent 1:1 classid 1:10 htb rate $RATE ceil $RATE
 
-echo "✅ 成功为 IPv6 端口 $PORT 设置上下行限速 $RATE"
+# 过滤 ifb0 入站流量限速
+tc filter add dev ifb0 protocol ipv6 parent 1: prio 1 flower src_port $PORT ip_proto tcp flowid 1:10
+tc filter add dev ifb0 protocol ipv6 parent 1: prio 2 flower src_port $PORT ip_proto udp flowid 1:10
+
+echo "✅ 限速设置完成: $IFACE 端口 $PORT 上下行限速 $RATE"
