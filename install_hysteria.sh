@@ -51,9 +51,6 @@ After=network.target
 ExecStart=/usr/local/bin/hysteria server --config /etc/hysteria/config.yaml
 Restart=always
 LimitNOFILE=65535
-CPUSchedulingPolicy=rr
-CPUSchedulingPriority=10
-CPUAffinity=0-3
 
 [Install]
 WantedBy=multi-user.target
