@@ -114,8 +114,6 @@ echo -e "\n客户端连接信息："
 echo "[$IPV6]:$PORT@$PASSWORD"
 
 # 输出状态
-
-# 输出状态
 echo -e "\n✅ Hysteria2 已部署完毕，使用端口 443，自签 TLS，已开启高并发优化。"
 systemctl status hysteria --no-pager
 
