@@ -13,30 +13,31 @@ openssl req -x509 -newkey rsa:2048 -sha256 -days 3650 -nodes \
 
 # 写入配置文件（启用高并发 & 性能优化）
 cat > /etc/hysteria/config.yaml <<EOF
-listen: '[::]:443'  # 监听地址与端口（IPv6 + IPv4）
+
+listen: '[::]:443'  # 监听 IPv4 + IPv6
 
 auth:
-  type: password
-  password: 123456  # 支持多个密码时可写成列表
-
+  type: userpass
+  userpass:
+    main: abc123a
 tls:
-  cert: /etc/hysteria/cert.pem        # TLS 证书路径（全链）
-  key: /etc/hysteria/key.pem          # TLS 私钥路径
+  cert: /etc/hysteria/cert.pem
+  key: /etc/hysteria/key.pem
 
 masquerade:
   type: proxy
   proxy:
-    url: https://www.bilibili.com     # 伪装目标网站
-    rewriteHost: true                 # 是否重写 Host
-    protocol: https                   # 伪装协议类型，可为 http/https/ws/wss 等
+    url: https://www.bilibili.com
+    rewriteHost: true
+    protocol: https
 
 quic:
-  initStreamReceiveWindow: 6144000      # 单个流初始接收窗口（4MB）
-  maxStreamReceiveWindow: 12288000      # 单个流最大接收窗口（6MB）
-  initConnReceiveWindow: 6144000        # 整体连接初始接收窗口（4MB）
-  maxConnReceiveWindow: 12288000        # 整体连接最大接收窗口（6MB）
-  maxIncomingStreams: 128              # 最大双向流数量
-  maxIncomingUniStreams: 128           # 最大单向流数量
+  initStreamReceiveWindow: 2048000
+  maxStreamReceiveWindow: 6144000
+  initConnReceiveWindow: 2048000
+  maxConnReceiveWindow: 6144000
+  maxIncomingStreams: 128
+  maxIncomingUniStreams: 128
   
 EOF
 
