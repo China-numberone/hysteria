@@ -102,7 +102,9 @@ IPV6=$(ip -6 addr show scope global | grep inet6 | head -n1 | awk '{print $2}' |
 PORT=$(grep '^listen:' /etc/hysteria/config.yaml | sed -E 's/.*\]:([0-9]+).*$/\1/')
 
 # 提取认证密码
-PASSWORD=$(awk '/^auth:/,/^$/{if($1=="userpass:"){print $2}}' /etc/hysteria/config.yaml)
+# PASSWORD=$(awk '/^auth:/,/^$/{if($1=="userpass:"){print $2}}' /etc/hysteria/config.yaml)
+PASSWORD=$(awk '/userpass:/ {flag=1; next} /^[^ ]/ {flag=0} flag && /^[[:space:]]+[a-zA-Z0-9_-]+: /' /etc/hysteria/config.yaml)
+
 
 systemctl status hysteria --no-pager
 
