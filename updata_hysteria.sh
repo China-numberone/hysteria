@@ -92,7 +92,9 @@ sysctl -p
 IPV6=$(ip -6 addr show scope global | grep inet6 | head -n1 | awk '{print $2}' | cut -d'/' -f1)
 
 # 提取端口号
-PORT=$(grep '^listen:' /etc/hysteria/config.yaml | awk -F: '{print $NF}' | tr -d ' ')
+# PORT=$(grep '^listen:' /etc/hysteria/config.yaml | awk -F: '{print $NF}' | tr -d ' ')
+PORT=$(grep '^listen:' /etc/hysteria/config.yaml | sed -E 's/.*\]:([0-9]+).*$/\1/')
+
 
 # 提取认证密码
 PASSWORD=$(awk '/^auth:/,/^$/{if($1=="password:"){print $2}}' /etc/hysteria/config.yaml)
