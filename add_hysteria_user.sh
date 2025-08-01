@@ -60,10 +60,14 @@ systemctl restart hysteria-${USER_NAME}
 IPV6=$(ip -6 addr show scope global | grep inet6 | head -n1 | awk '{print $2}' | cut -d'/' -f1)
 
 PWD=$(awk '
-  /userpass:/ {flag=1; next}     # 开始提取 userpass 后的内容
-  /^[^[:space:]]/ {flag=0}       # 遇到左侧无缩进（下一个段落）停止
-  flag && /^[[:space:]]+[a-zA-Z0-9_-]+: / {sub(/^[[:space:]]+/, ""); print}
-' /etc/hysteria/config.yaml)
+  /userpass:/ {flag=1; next}
+  /^[^[:space:]]/ {flag=0}
+  flag && /^[[:space:]]+[a-zA-Z0-9_-]+: / {
+    sub(/^[[:space:]]+/, "")
+    print
+  }
+' "$CONFIG_PATH")
+
 
 echo -e "$PWD"
 
