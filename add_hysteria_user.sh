@@ -59,15 +59,7 @@ systemctl restart hysteria-${USER_NAME}
 # 获取 IPv6 地址（第一个全局地址）
 IPV6=$(ip -6 addr show scope global | grep inet6 | head -n1 | awk '{print $2}' | cut -d'/' -f1)
 
-PWD=$(awk '
-  /userpass:/ {flag=1; next}
-  /^[^[:space:]]/ {flag=0}
-  flag && /^[[:space:]]+[a-zA-Z0-9_-]+: / {
-    sub(/^[[:space:]]+/, "")
-    print
-  }
-' "$CONFIG_PATH")
-
+PWD=$(grep -A1 "userpass:" "$CONFIG_PATH" | tail -n1 | sed 's/^[[:space:]]*//')
 
 echo -e "$PWD"
 
