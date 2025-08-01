@@ -101,9 +101,8 @@ systemctl status hysteria --no-pager
 
 # 拼接输出
 echo -e "\n客户端连接信息："
-echo "[$IPV6]:$PORT@$PASSWORD"
-
-# 输出状态
+#echo "[$IPV6]:$PORT@$PASSWORD"
+echo -e "\n客户端连接信息：\nhy2://$PASSWORD@[$IPV6]:$PORT?insecure=1&sni=bing.com#Hysteria2-IPv6"
 
 # 输出状态
 echo -e "\n✅ Hysteria2 已部署完毕，使用端口 443，自签 TLS，已开启高并发优化。"
