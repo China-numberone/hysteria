@@ -59,7 +59,7 @@ systemctl restart hysteria-${USER_NAME}
 # 获取 IPv6 地址（第一个全局地址）
 IPV6=$(ip -6 addr show scope global | grep inet6 | head -n1 | awk '{print $2}' | cut -d'/' -f1)
 
-PWD=$(awk '/userpass:/ {flag=1; next} /^[^ ]/ {flag=0} flag && /^[[:space:]]+[a-zA-Z0-9_-]+: /' /etc/hysteria/config.yaml | sed 's/^ *//')
+PWD=$(awk '/userpass:/ {flag=1; next} /^[^ ]/ {flag=0} flag && /^[[:space:]]+[a-zA-Z0-9_-]+: /' "$CONFIG_PATH" | sed 's/^ *//')
 echo -e "$PWD"
 
 # 输出客户端连接信息
