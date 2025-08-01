@@ -59,8 +59,14 @@ systemctl restart hysteria-${USER_NAME}
 # 获取 IPv6 地址（第一个全局地址）
 IPV6=$(ip -6 addr show scope global | grep inet6 | head -n1 | awk '{print $2}' | cut -d'/' -f1)
 
-PWD=$(awk '/userpass:/ {flag=1; next} /^[^ ]/ {flag=0} flag && /^[[:space:]]+[a-zA-Z0-9_-]+: /' "$CONFIG_PATH" | sed 's/^ *//')
+PWD=$(awk '
+  /userpass:/ {flag=1; next}     # 开始提取 userpass 后的内容
+  /^[^[:space:]]/ {flag=0}       # 遇到左侧无缩进（下一个段落）停止
+  flag && /^[[:space:]]+[a-zA-Z0-9_-]+: / {sub(/^[[:space:]]+/, ""); print}
+' /etc/hysteria/config.yaml)
+
 echo -e "$PWD"
+
 
 # 输出客户端连接信息
 echo -e "\n客户端连接信息：\nhy2://$PWD@[$IPV6]:$PORT?insecure=1&sni=bing.com#Hysteria2-IPv6"
