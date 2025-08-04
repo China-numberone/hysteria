@@ -50,7 +50,6 @@ After=network.target
 [Service]
 ExecStart=/usr/local/bin/hysteria server --config /etc/hysteria/config.yaml
 Restart=always
-# LimitNOFILE=65535
 
 [Install]
 WantedBy=multi-user.target
@@ -62,32 +61,47 @@ systemctl daemon-reload
 systemctl enable hysteria
 systemctl restart hysteria
 
-# 优化系统内核参数（UDP & 高并发）
 cat >> /etc/sysctl.conf <<EOF
 
-fs.file-max = 65536
-fs.nr_open = 65536
-net.netfilter.nf_conntrack_max = 16384
+# 文件描述符限制（建议更大，适配高并发）
+fs.file-max = 1048576
+fs.nr_open = 1048576
 
-# IPv6转发开启
+# 连接跟踪表大小（适用于代理、NAT 等）
+net.netfilter.nf_conntrack_max = 262144
+
+# IPv6 转发和邻居表优化
 net.ipv6.conf.all.forwarding = 1
 net.ipv6.conf.default.forwarding = 1
-
-# IPv6邻居缓存阈值，防止邻居缓存表溢出
 net.ipv6.neigh.default.gc_thresh1 = 1024
 net.ipv6.neigh.default.gc_thresh2 = 2048
 net.ipv6.neigh.default.gc_thresh3 = 4096
-
-# IPv6 ICMP 限速
 net.ipv6.icmp.ratelimit = 1000
 
-# UDP 网络缓冲区提升，减少丢包
+# IPv4 网络优化参数
+
+net.ipv4.ip_forward = 1
+net.ipv4.tcp_syncookies = 1
+net.ipv4.conf.all.accept_source_route = 0
+net.ipv4.conf.default.accept_source_route = 0
+net.ipv4.conf.all.accept_redirects = 0
+net.ipv4.conf.default.accept_redirects = 0
+net.ipv4.conf.all.rp_filter = 1
+net.ipv4.conf.default.rp_filter = 1
+net.ipv4.tcp_fin_timeout = 15
+net.ipv4.tcp_tw_reuse = 1
+net.ipv4.tcp_tw_recycle = 0
+
+# TCP 内存和缓冲区优化
 net.core.rmem_max = 16777216
 net.core.wmem_max = 16777216
-net.core.rmem_default = 262144
-net.core.wmem_default = 262144
+net.ipv4.tcp_rmem = 4096 87380 16777216
+net.ipv4.tcp_wmem = 4096 65536 16777216
 
-# 网络接收队列长度
+# 可用端口范围扩大
+net.ipv4.ip_local_port_range = 10240 65535
+
+# 接收队列长度
 net.core.netdev_max_backlog = 5000
 
 EOF
@@ -98,15 +112,15 @@ sysctl -p
 # 提取 IPv6 地址（取第一个全局 IPv6）
 IPV6=$(ip -6 addr show scope global | grep inet6 | head -n1 | awk '{print $2}' | cut -d'/' -f1)
 
+# 提取第一个全局 IPv4 地址
+IPV4=$(ip -4 addr show scope global | grep inet | head -n1 | awk '{print $2}' | cut -d'/' -f1)
+
 # 提取端口号
 PORT=$(grep '^listen:' /etc/hysteria/config.yaml | sed -E 's/.*\]:([0-9]+).*$/\1/')
 
 # 提取认证密码
 # PASSWORD=$(awk '/^auth:/,/^$/{if($1=="userpass:"){print $2}}' /etc/hysteria/config.yaml)
 PASSWORD=$(awk '/userpass:/ {flag=1; next} /^[^ ]/ {flag=0} flag && /^[[:space:]]+[a-zA-Z0-9_-]+: /' /etc/hysteria/config.yaml)
-
-# 提取第一个全局 IPv4 地址
-IPV4=$(ip -4 addr show scope global | grep inet | head -n1 | awk '{print $2}' | cut -d'/' -f1)
 
 systemctl status hysteria --no-pager
 
