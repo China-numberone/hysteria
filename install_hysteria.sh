@@ -1,5 +1,20 @@
 #!/bin/bash
 
+# 🛠️ 先修复 Buster 源问题（仅 Debian 10）
+if grep -qi 'buster' /etc/os-release 2>/dev/null || grep -qi 'buster' /etc/debian_version 2>/dev/null; then
+    echo "[INFO] Detected Debian 10 (Buster) - switching APT sources to archive.debian.org"
+
+    sed -i 's|http://deb.debian.org|http://archive.debian.org|g' /etc/apt/sources.list
+    sed -i 's|http://security.debian.org|http://archive.debian.org|g' /etc/apt/sources.list
+
+    echo 'Acquire::Check-Valid-Until "false";' > /etc/apt/apt.conf.d/99no-check-valid-until
+
+    apt update
+fi
+
+# ✅ 继续安装依赖
+apt install curl wget tar -y
+
 # 安装 Hysteria2 最新版本
 curl -fsSL https://get.hy2.sh | bash
 
