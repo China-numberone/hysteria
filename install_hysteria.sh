@@ -142,7 +142,9 @@ PORT=$(grep '^listen:' /etc/hysteria/config.yaml | sed -E 's/.*\]:([0-9]+).*$/\1
 
 # 提取认证密码
 # PASSWORD=$(awk '/^auth:/,/^$/{if($1=="userpass:"){print $2}}' /etc/hysteria/config.yaml)
-PASSWORD=$(awk '/userpass:/ {in_userpass=1; next} /^[^[:space:]]/ {in_userpass=0} in_userpass && /^[[:space:]]*[a-zA-Z0-9_-]+:[[:space:]]*/ { gsub(/^[ \t]+/, "", $0); last=$0 } END { print last }' /etc/hysteria/config.yaml)
+# PASSWORD=$(awk '/userpass:/ {in_userpass=1; next} /^[^[:space:]]/ {in_userpass=0} in_userpass && /^[[:space:]]*[a-zA-Z0-9_-]+:[[:space:]]*/ { gsub(/^[ \t]+/, "", $0); last=$0 } END { print last }' /etc/hysteria/config.yaml)
+PASSWORD=$(awk '/userpass:/ {in_userpass=1; next} /^[^[:space:]]/ {in_userpass=0} in_userpass && /^[[:space:]]*[a-zA-Z0-9_-]+:[[:space:]]*/ { gsub(/^[ \t]+/, "", $0); last=$0 } END { gsub(/[[:space:]]+/, "", last); print last }' /etc/hysteria/config.yaml)
+
 
 systemctl status hysteria --no-pager
 
