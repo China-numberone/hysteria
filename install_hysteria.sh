@@ -29,7 +29,9 @@ openssl req -x509 -newkey rsa:2048 -sha256 -days 3650 -nodes \
 # 写入配置文件（启用高并发 & 性能优化）
 cat > /etc/hysteria/config.yaml <<EOF
 
-listen: '[::]:443'  # 监听 IPv4 + IPv6
+listen: [0.0.0.0:443, '[::]:443']
+
+# listen: '[::]:443'  # 监听 IPv4 + IPv6
 # listen: '0.0.0.0:443'
  
 
