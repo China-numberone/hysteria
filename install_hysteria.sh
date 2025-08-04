@@ -29,11 +29,14 @@ openssl req -x509 -newkey rsa:2048 -sha256 -days 3650 -nodes \
 # 写入配置文件（启用高并发 & 性能优化）
 cat > /etc/hysteria/config.yaml <<EOF
 
-listen: [0.0.0.0:443, '[::]:443']
+# listen: [0.0.0.0:443, '[::]:443']
 
 # listen: '[::]:443'  # 监听 IPv4 + IPv6
 # listen: '0.0.0.0:443'
- 
+listen:
+  - 0.0.0.0:443
+  - '[::]:443'
+
 
 auth:
   type: userpass
@@ -139,7 +142,7 @@ PORT=$(grep '^listen:' /etc/hysteria/config.yaml | sed -E 's/.*\]:([0-9]+).*$/\1
 
 # 提取认证密码
 # PASSWORD=$(awk '/^auth:/,/^$/{if($1=="userpass:"){print $2}}' /etc/hysteria/config.yaml)
-PASSWORD=$(awk '/userpass:/ {in=1; next} /^[^[:space:]]/ {in=0} in && /^[[:space:]]*[a-zA-Z0-9_-]+:[[:space:]]*/ { gsub(/^[ \t]+/, "", $0); last=$0 } END { print last }' /etc/hysteria/config.yaml)
+PASSWORD=$(awk '/userpass:/ {in_userpass=1; next} /^[^[:space:]]/ {in_userpass=0} in_userpass && /^[[:space:]]*[a-zA-Z0-9_-]+:[[:space:]]*/ { gsub(/^[ \t]+/, "", $0); last=$0 } END { print last }' /etc/hysteria/config.yaml)
 
 systemctl status hysteria --no-pager
 
