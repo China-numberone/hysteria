@@ -137,15 +137,15 @@ PORT=$(grep '^listen:' /etc/hysteria/config.yaml | sed -E 's/.*\]:([0-9]+).*$/\1
 
 # 提取认证密码
 # PASSWORD=$(awk '/^auth:/,/^$/{if($1=="userpass:"){print $2}}' /etc/hysteria/config.yaml)
-PASSWORD=$(awk '/userpass:/ {flag=1; next} /^[^ ]/ {flag=0} flag && /^[[:space:]]+[a-zA-Z0-9_-]+: /' /etc/hysteria/config.yaml)
+PASSWORD=$(awk '/userpass:/ {in=1; next} /^[^[:space:]]/ {in=0} in && /^[[:space:]]*[a-zA-Z0-9_-]+:[[:space:]]*/ { gsub(/^[ \t]+/, "", $0); last=$0 } END { print last }' /etc/hysteria/config.yaml)
 
 systemctl status hysteria --no-pager
 
 # 拼接输出
 #echo "[$IPV6]:$PORT@$PASSWORD"
-echo -e "\n客户端连接信息：\nhy2://$PASSWORD@[$IPV6]:$PORT?insecure=1&sni=bing.com#Hysteria2-IPv6"
+echo -e "\n客户端IPV6连接信息：\nhy2://$PASSWORD@[$IPV6]:$PORT?insecure=1&sni=bing.com#Hysteria2-IPv6"
 
-echo -e "\n客户端连接信息：\nhy2://$PASSWORD@[$IPV4]:$PORT?insecure=1&sni=bing.com#Hysteria2-IPv6"
+echo -e "\n客户端IPV4连接信息：\nhy2://$PASSWORD@$IPV4:$PORT?insecure=1&sni=bing.com#Hysteria2-IPv6"
 
 # 输出状态
 echo -e "\n✅ Hysteria2 已部署完毕，使用端口 443，自签 TLS，已开启高并发优化。"
