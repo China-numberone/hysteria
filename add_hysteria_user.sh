@@ -60,7 +60,9 @@ systemctl restart hysteria-${USER}
 # 获取公网 IPv4 地址
 IPV4=$(ip -4 addr show scope global | grep inet | head -n1 | awk '{print $2}' | cut -d'/' -f1)
 
-PASSWORD=$(awk '/userpass:/ {in_userpass=1; next} /^[^[:space:]]/ {in_userpass=0} in_userpass && /^[[:space:]]*[a-zA-Z0-9_-]+:[[:space:]]*/ { gsub(/^[ \t]+/, "", $0); last=$0 } END { gsub(/[[:space:]]+/, "", last); print last }' /etc/hysteria/${USER}.yaml)
+CONFIG_FILE="/etc/hysteria/${USER}.yaml"
+
+PASSWORD=$(awk '/userpass:/ {in_userpass=1; next} /^[^[:space:]]/ {in_userpass=0} in_userpass && /^[[:space:]]*[a-zA-Z0-9_-]+:[[:space:]]*/ { gsub(/^[ \t]+/, "", $0); last=$0 } END { gsub(/[[:space:]]+/, "", last); print last }' "$CONFIG_FILE")
 
 # 输出连接信息
 echo -e "\n✅ Hysteria2 用户 $USER 部署完成，端口 $PORT"
