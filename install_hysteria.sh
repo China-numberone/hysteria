@@ -33,10 +33,7 @@ cat > /etc/hysteria/config.yaml <<EOF
 
 # listen: '[::]:443'  # 监听 IPv4 + IPv6
 # listen: '0.0.0.0:443'
-listen:
-  - 0.0.0.0:443
-  - '[::]:443'
-
+listen: 0.0.0.0:443
 
 auth:
   type: userpass
