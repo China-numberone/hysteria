@@ -30,12 +30,12 @@ masquerade:
     protocol: https
 
 quic:
-  initStreamReceiveWindow: 512000
-  maxStreamReceiveWindow: 1536000
-  initConnReceiveWindow: 512000
-  maxConnReceiveWindow: 1536000
-  maxIncomingStreams: 32
-  maxIncomingUniStreams: 32
+  initStreamReceiveWindow: 1024000
+  maxStreamReceiveWindow: 4096000
+  initConnReceiveWindow: 1024000
+  maxConnReceiveWindow: 4096000
+  maxIncomingStreams: 64
+  maxIncomingUniStreams: 64
 EOF
 
 # 写入 systemd 服务文件
