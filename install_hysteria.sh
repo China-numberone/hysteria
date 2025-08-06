@@ -53,12 +53,12 @@ masquerade:
     protocol: https
 
 quic:
-  initStreamReceiveWindow: 2048000
-  maxStreamReceiveWindow: 6144000
-  initConnReceiveWindow: 2048000
-  maxConnReceiveWindow: 6144000
-  maxIncomingStreams: 128
-  maxIncomingUniStreams: 128
+  initStreamReceiveWindow: 8192000
+  maxStreamReceiveWindow: 16384000
+  initConnReceiveWindow: 8192000
+  maxConnReceiveWindow: 16384000
+  maxIncomingStreams: 256
+  maxIncomingUniStreams: 256
   
 EOF
 
