@@ -3,6 +3,11 @@ MAX_TRIES=3
 TRIES=0
 VALID_INPUT=0
 
+# 等级信息数组
+LEVEL_NAMES=("trial" "basic" "pro" "elite" "vip" "svip")
+LEVEL_SIZES=("3GB" "30GB" "100GB" "200GB" "500GB" "1000GB")
+LEVEL_DURATIONS=("3day" "30day" "90day" "120day" "365day" "365day")
+
 while [[ $TRIES -lt $MAX_TRIES ]]; do
   echo "请选择用户等级:"
   echo "1) trial（试用） - 3GB / 3天"
@@ -13,54 +18,17 @@ while [[ $TRIES -lt $MAX_TRIES ]]; do
   echo "6) svip（至尊）  - 1TB / 365天"
   read -rp "请输入等级编号 (1-6): " LEVEL_NUM
 
-  case "$LEVEL_NUM" in
-    1)
-      LEVEL_NAME="trial"
-      LEVEL_SIZE="3GB"
-      LEVEL_DURATION="3day"
-      VALID_INPUT=1
-      break
-      ;;
-    2)
-      LEVEL_NAME="basic"
-      LEVEL_SIZE="30GB"
-      LEVEL_DURATION="30day"
-      VALID_INPUT=1
-      break
-      ;;
-    3)
-      LEVEL_NAME="pro"
-      LEVEL_SIZE="100GB"
-      LEVEL_DURATION="90day"
-      VALID_INPUT=1
-      break
-      ;;
-    4)
-      LEVEL_NAME="elite"
-      LEVEL_SIZE="200GB"
-      LEVEL_DURATION="120day"
-      VALID_INPUT=1
-      break
-      ;;
-    5)
-      LEVEL_NAME="vip"
-      LEVEL_SIZE="500GB"
-      LEVEL_DURATION="365day"
-      VALID_INPUT=1
-      break
-      ;;
-    6)
-      LEVEL_NAME="svip"
-      LEVEL_SIZE="1000GB"
-      LEVEL_DURATION="365day"
-      VALID_INPUT=1
-      break
-      ;;
-    *)
-      echo "输入无效，请输入 1-6 之间的数字。"
-      ((TRIES++))
-      ;;
-  esac
+  if [[ "$LEVEL_NUM" =~ ^[1-6]$ ]]; then
+    INDEX=$((LEVEL_NUM - 1))
+    LEVEL_NAME="${LEVEL_NAMES[$INDEX]}"
+    LEVEL_SIZE="${LEVEL_SIZES[$INDEX]}"
+    LEVEL_DURATION="${LEVEL_DURATIONS[$INDEX]}"
+    VALID_INPUT=1
+    break
+  else
+    echo "输入无效，请输入 1-6 之间的数字。"
+    ((TRIES++))
+  fi
 done
 
 if [[ $VALID_INPUT -ne 1 ]]; then
