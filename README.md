@@ -7,3 +7,5 @@ bash <(wget -qO- https://raw.githubusercontent.com/China-numberone/hysteria/main
 bash <(wget -qO- https://raw.githubusercontent.com/China-numberone/hysteria/main/add_hysteria_user.sh)
 
 bash <(wget -qO- https://raw.githubusercontent.com/China-numberone/hysteria/main/delete_hysteria_user.sh)
+
+bash <(wget -qO- https://raw.githubusercontent.com/China-numberone/hysteria/main/New_add_hysteria_user.sh)
