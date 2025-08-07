@@ -51,7 +51,7 @@ while [[ $TRIES -lt $MAX_TRIES ]]; do
       ;;
     6)
       LEVEL_NAME="svip"
-      LEVEL_SIZE="1TB"
+      LEVEL_SIZE="1000GB"
       LEVEL_DURATION="365day"
       VALID_INPUT=1
       break
@@ -75,12 +75,6 @@ LEVEL_COMMENT="# level: $LEVEL_NAME ($LEVEL_SIZE, $LEVEL_DURATION, created: $CRE
 PORT=$((RANDOM % 40000 + 20000))
 USER="user${PORT}"
 PASS="${USER}$(tr -dc 'a-z' < /dev/urandom | head -c 5)"
-LIMIT_GB=1
-LIMIT_BYTES=$((LIMIT_GB * 1024 * 1024 * 1024))
-
-# ========== 加入统计规则 ==========
-iptables -C INPUT -p udp --dport $PORT -j ACCEPT 2>/dev/null || iptables -I INPUT -p udp --dport $PORT -j ACCEPT
-iptables -C OUTPUT -p udp --sport $PORT -j ACCEPT 2>/dev/null || iptables -I OUTPUT -p udp --sport $PORT -j ACCEPT
 
 # ========== 2. 写入 Hysteria 配置 ==========
 mkdir -p /etc/hysteria
@@ -135,8 +129,8 @@ systemctl enable hysteria-${USER}
 systemctl start hysteria-${USER}
 
 # ========== 5. 添加 iptables 流量统计规则 ==========
-iptables -I INPUT -p udp --dport $PORT -j ACCEPT
-iptables -I OUTPUT -p udp --sport $PORT -j ACCEPT
+iptables -C INPUT -p udp --dport $PORT -j ACCEPT 2>/dev/null || iptables -I INPUT -p udp --dport $PORT -j ACCEPT
+iptables -C OUTPUT -p udp --sport $PORT -j ACCEPT 2>/dev/null || iptables -I OUTPUT -p udp --sport $PORT -j ACCEPT
 
 # ========== 6. 创建流量检测脚本 ==========
 MONITOR_SCRIPT="/etc/hysteria/limit_check_${USER}.sh"
