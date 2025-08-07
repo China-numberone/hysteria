@@ -173,7 +173,6 @@ for config in "$CONFIG_DIR"/user*.yaml; do
     DURATION_DAYS=$(echo "$INFO" | cut -d',' -f3 | tr -dc '0-9')
     CREATED_DATE=$(echo "$INFO" | cut -d',' -f4 | sed 's/created: *//g' | xargs)
 
-    # 转换为时间戳
     CREATED_TIMESTAMP=$(date -d "$CREATED_DATE" +%s 2>/dev/null)
 
     [[ -z "$PORT" || -z "$LIMIT_GB" || -z "$DURATION_DAYS" || -z "$CREATED_TIMESTAMP" ]] && {
@@ -185,7 +184,6 @@ for config in "$CONFIG_DIR"/user*.yaml; do
     LIMIT_BYTES=$((LIMIT_GB * 1024 * 1024 * 1024))
     EXPIRY_TIMESTAMP=$((CREATED_TIMESTAMP + DURATION_DAYS * 86400))
 
-    # 获取 iptables 中端口的流量统计（单位：字节）
     IN_BYTES=$(iptables -nvx -L INPUT 2>/dev/null | grep "$PORT" | awk '{sum += $2} END {print sum}')
     OUT_BYTES=$(iptables -nvx -L OUTPUT 2>/dev/null | grep "$PORT" | awk '{sum += $2} END {print sum}')
     TOTAL_BYTES=$((IN_BYTES + OUT_BYTES))
@@ -214,7 +212,6 @@ for config in "$CONFIG_DIR"/user*.yaml; do
     fi
 done
 
-# 如果没有任何端口被停用
 if [ "$ANY_EXPIRED" = false ]; then
     echo "$(date '+%F %T'): No ports expired" >> "$LOG_FILE"
 fi
