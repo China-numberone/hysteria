@@ -78,6 +78,10 @@ PASS="${USER}$(tr -dc 'a-z' < /dev/urandom | head -c 5)"
 LIMIT_GB=1
 LIMIT_BYTES=$((LIMIT_GB * 1024 * 1024 * 1024))
 
+# ========== 加入统计规则 ==========
+iptables -C INPUT -p udp --dport $PORT -j ACCEPT 2>/dev/null || iptables -I INPUT -p udp --dport $PORT -j ACCEPT
+iptables -C OUTPUT -p udp --sport $PORT -j ACCEPT 2>/dev/null || iptables -I OUTPUT -p udp --sport $PORT -j ACCEPT
+
 # ========== 2. 写入 Hysteria 配置 ==========
 mkdir -p /etc/hysteria
 
