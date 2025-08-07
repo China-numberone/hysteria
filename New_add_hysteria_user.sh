@@ -105,7 +105,7 @@ MONITOR_SCRIPT="/etc/hysteria/limit_check.sh"
 cat > $MONITOR_SCRIPT <<EOF
 #!/bin/bash
 
-# ---------- 检测并安装 bc ----------
+# 检查并安装 bc
 if ! command -v bc >/dev/null 2>&1; then
   echo "$(date '+%F %T'): bc not found, installing..."
   if [ -f /etc/debian_version ]; then
@@ -122,6 +122,9 @@ fi
 
 CONFIG_DIR="/etc/hysteria"
 LOG_FILE="/var/log/hysteria_limit.log"
+STOP_TIME_DIR="/var/log/hysteria/stop_times"
+mkdir -p "$STOP_TIME_DIR"
+
 CURRENT_DATE=$(date +%s)
 ANY_EXPIRED=false
 
@@ -172,28 +175,46 @@ for config in "$CONFIG_DIR"/user*.yaml; do
 
   USED_GB=$(echo "scale=2; $TOTAL_BYTES / (1024 * 1024 * 1024)" | bc)
 
+  STOP_FILE="$STOP_TIME_DIR/$PORT.stop"
+
   EXPIRED=false
   REASON=""
 
-  if (( $(echo "$TOTAL_BYTES >= $LIMIT_BYTES" | bc -l) )); then
+  # 如果已有停用时间文件，读取并固定停用时间
+  if [ -f "$STOP_FILE" ]; then
+    STOP_TIMESTAMP=$(cat "$STOP_FILE")
+    # 不重复停用，保持之前停用时间和状态
     EXPIRED=true
-    REASON="traffic limit exceeded (${USED_GB}GB used / ${LIMIT_GB}GB)"
-  fi
+    REASON="previously stopped at $(date -d "@$STOP_TIMESTAMP" '+%F %T')"
+  else
+    if (( $(echo "$TOTAL_BYTES >= $LIMIT_BYTES" | bc -l) )); then
+      EXPIRED=true
+      REASON="traffic limit exceeded (${USED_GB}GB used / ${LIMIT_GB}GB)"
+    fi
 
-  if (( CURRENT_DATE >= EXPIRY_TIMESTAMP )); then
-    EXPIRED=true
-    REASON="time limit expired"
+    if (( CURRENT_DATE >= EXPIRY_TIMESTAMP )); then
+      EXPIRED=true
+      REASON="time limit expired"
+    fi
   fi
 
   if [ "$EXPIRED" = true ]; then
     ANY_EXPIRED=true
-    systemctl stop "$SERVICE_NAME" 2>/dev/null
-    systemctl disable "$SERVICE_NAME" 2>/dev/null
-    iptables -D INPUT -p udp --dport "$PORT" -j ACCEPT 2>/dev/null
-    iptables -D OUTPUT -p udp --sport "$PORT" -j ACCEPT 2>/dev/null
-    iptables-save > /etc/iptables/rules.v4 2>/dev/null
-    echo "$(date): ❌ $SERVICE_NAME (port: $PORT) stopped due to $REASON" >> "$LOG_FILE"
-    echo "Stopped user on port $PORT due to: $REASON"
+
+    if [ ! -f "$STOP_FILE" ]; then
+      echo "$CURRENT_DATE" > "$STOP_FILE"
+      echo "$(date): Stopping user $SERVICE_NAME (port: $PORT) due to $REASON" >> "$LOG_FILE"
+
+      systemctl stop "$SERVICE_NAME" 2>/dev/null
+      systemctl disable "$SERVICE_NAME" 2>/dev/null
+      iptables -D INPUT -p udp --dport "$PORT" -j ACCEPT 2>/dev/null
+      iptables -D OUTPUT -p udp --sport "$PORT" -j ACCEPT 2>/dev/null
+      iptables-save > /etc/iptables/rules.v4 2>/dev/null
+
+      echo "Stopped user on port $PORT due to: $REASON"
+    else
+      echo "$(date): User $SERVICE_NAME (port: $PORT) already stopped previously at $(date -d "@$STOP_TIMESTAMP" '+%F %T')" >> "$LOG_FILE"
+    fi
   else
     echo "$(date): ✅ $SERVICE_NAME (port: $PORT) usage OK: ${USED_GB}GB / ${LIMIT_GB}GB" >> "$LOG_FILE"
     echo "User on port $PORT: ${USED_GB}GB / ${LIMIT_GB}GB - OK"
