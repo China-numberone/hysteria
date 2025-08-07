@@ -69,13 +69,13 @@ if [[ $VALID_INPUT -ne 1 ]]; then
 fi
 
 CREATED_DATE=$(date +%Y-%m-%d)
-LEVEL_COMMENT="# level: $LEVEL_NAME ($LEVEL_SIZE, $LEVEL_DURATION, created: $CREATED_DATE)"
 
 # ========== 1. 基本参数 ==========
 PORT=$((RANDOM % 40000 + 20000))
 USER="user${PORT}"
 PASS="${USER}$(tr -dc 'a-z' < /dev/urandom | head -c 5)"
 
+LEVEL_COMMENT="# level: $LEVEL_NAME (${PORT},$LEVEL_SIZE, $LEVEL_DURATION, created: $CREATED_DATE)"
 # ========== 2. 写入 Hysteria 配置 ==========
 mkdir -p /etc/hysteria
 
