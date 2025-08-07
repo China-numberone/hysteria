@@ -148,35 +148,36 @@ ANY_EXPIRED=false
 # 遍历所有用户配置
 for config in "$CONFIG_DIR"/user*.yaml; do
     [ ! -f "$config" ] && {
-        echo "$(date '+%F %T'): Skipping $config: File not found" >> "$LOG_FILE"
+        echo "$(date): Skipping $config: File not found" >> "$LOG_FILE"
         continue
     }
 
     # 提取包含 level 信息的行
-    LEVEL_LINE=$(grep -i "^# *level:" "$config")
+    LEVEL_LINE=$(grep "# level" "$config")
 
     [[ -z "$LEVEL_LINE" ]] && {
-        echo "$(date '+%F %T'): Skipping $config: No level comment found" >> "$LOG_FILE"
+        echo "$(date): Skipping $config: No level comment found" >> "$LOG_FILE"
         continue
     }
 
     # 使用正则提取括号中的内容
-    INFO=$(echo "$LEVEL_LINE" | grep -oP '\(\K[0-9]+,[0-9]+GB, *[0-9]+day, *created: *[0-9\-]+')
-    
+    INFO=$(echo "$LEVEL_LINE" | grep -oP '\(.*?\)' | tr -d '()')
+
     [[ -z "$INFO" ]] && {
-        echo "$(date '+%F %T'): Skipping $config: Invalid level format ($LEVEL_LINE)" >> "$LOG_FILE"
+        echo "$(date): Skipping $config: Invalid level format ($LEVEL_LINE)" >> "$LOG_FILE"
         continue
     }
 
     PORT=$(echo "$INFO" | cut -d',' -f1)
-    LIMIT_GB=$(echo "$INFO" | cut -d',' -f2 | tr -dc '0-9')
-    DURATION_DAYS=$(echo "$INFO" | cut -d',' -f3 | tr -dc '0-9')
-    CREATED_DATE=$(echo "$INFO" | cut -d',' -f4 | sed 's/created: *//g' | xargs)
+    LIMIT_GB=$(echo "$INFO" | cut -d',' -f2)
+    DURATION_DAYS=$(echo "$INFO" | cut -d',' -f3)
+    CREATED_DATE=$(echo "$INFO" | cut -d',' -f4)
 
+    # 时间戳转换
     CREATED_TIMESTAMP=$(date -d "$CREATED_DATE" +%s 2>/dev/null)
 
     [[ -z "$PORT" || -z "$LIMIT_GB" || -z "$DURATION_DAYS" || -z "$CREATED_TIMESTAMP" ]] && {
-        echo "$(date '+%F %T'): Skipping $config: Missing values (PORT=$PORT, LIMIT=$LIMIT_GB, DAYS=$DURATION_DAYS, CREATED=$CREATED_DATE)" >> "$LOG_FILE"
+        echo "$(date): Skipping $config: Missing values (PORT=$PORT, LIMIT=$LIMIT_GB, DAYS=$DURATION_DAYS, CREATED=$CREATED_DATE)" >> "$LOG_FILE"
         continue
     }
 
@@ -184,8 +185,9 @@ for config in "$CONFIG_DIR"/user*.yaml; do
     LIMIT_BYTES=$((LIMIT_GB * 1024 * 1024 * 1024))
     EXPIRY_TIMESTAMP=$((CREATED_TIMESTAMP + DURATION_DAYS * 86400))
 
-    IN_BYTES=$(iptables -nvx -L INPUT 2>/dev/null | grep "$PORT" | awk '{sum += $2} END {print sum}')
-    OUT_BYTES=$(iptables -nvx -L OUTPUT 2>/dev/null | grep "$PORT" | awk '{sum += $2} END {print sum}')
+    # 获取流量信息（需要你自己实现）
+    IN_BYTES=0
+    OUT_BYTES=0
     TOTAL_BYTES=$((IN_BYTES + OUT_BYTES))
 
     EXPIRED=false
@@ -208,13 +210,14 @@ for config in "$CONFIG_DIR"/user*.yaml; do
         iptables -D INPUT -p udp --dport "$PORT" -j ACCEPT 2>/dev/null
         iptables -D OUTPUT -p udp --sport "$PORT" -j ACCEPT 2>/dev/null
         iptables-save > /etc/iptables/rules.v4 2>/dev/null
-        echo "$(date '+%F %T'): $SERVICE_NAME (port: $PORT) stopped due to $REASON" >> "$LOG_FILE"
+        echo "$(date): $SERVICE_NAME (port: $PORT) stopped due to $REASON" >> "$LOG_FILE"
     fi
 done
 
 if [ "$ANY_EXPIRED" = false ]; then
-    echo "$(date '+%F %T'): No ports expired" >> "$LOG_FILE"
+    echo "$(date): No ports expired" >> "$LOG_FILE"
 fi
+
 
 EOF
 
