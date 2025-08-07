@@ -221,7 +221,7 @@ fi
 
 EOF
 
-# ========== 7. 添加定时任务 ==========
+# ========== 7. 添加定时任务 grep CRON /var/log/syslog | grep limit_check.sh ==========
 CRON_JOB="* * * * * root bash $MONITOR_SCRIPT"
 grep -q "$MONITOR_SCRIPT" /etc/crontab || echo "$CRON_JOB" >> /etc/crontab
 
