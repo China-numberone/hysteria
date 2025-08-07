@@ -135,79 +135,61 @@ iptables -C OUTPUT -p udp --sport $PORT -j ACCEPT 2>/dev/null || iptables -I OUT
 # ========== 6. 创建流量检测脚本 ==========
 MONITOR_SCRIPT="/etc/hysteria/limit_check.sh"
 cat > $MONITOR_SCRIPT <<EOF
-
 #!/bin/bash
 
 CONFIG_DIR="/etc/hysteria"
 LOG_FILE="/var/log/hysteria_limit.log"
-CURRENT_DATE=$(date +%s)  # Current timestamp in seconds
+CURRENT_DATE=$(date +%s)
 ANY_EXPIRED=false
 
-# Create log file if it doesn't exist
+# 确保日志文件存在
 [ ! -f "$LOG_FILE" ] && touch "$LOG_FILE"
 
-# Traverse all configuration files
-for config in $CONFIG_DIR/user*.yaml; do
-    # Check if config file exists
+# 遍历所有用户配置
+for config in "$CONFIG_DIR"/user*.yaml; do
     [ ! -f "$config" ] && {
-        echo "$(date '+%Y-%m-%d %H:%M:%S'): Skipping $config: File not found" >> "$LOG_FILE"
+        echo "$(date '+%F %T'): Skipping $config: File not found" >> "$LOG_FILE"
         continue
     }
 
-    # Extract level line with comments (supporting colon)
-    LEVEL_LINE=$(grep -E "^# level:" "$config")
+    # 提取包含 level 信息的行
+    LEVEL_LINE=$(grep -i "^# *level:" "$config")
+
     [[ -z "$LEVEL_LINE" ]] && {
-        echo "$(date '+%Y-%m-%d %H:%M:%S'): Skipping $config: No level comment found" >> "$LOG_FILE"
+        echo "$(date '+%F %T'): Skipping $config: No level comment found" >> "$LOG_FILE"
         continue
     }
 
-    # Extract port, limit, duration, and creation date (4 fields)
-    LIMIT_STR=$(echo "$LEVEL_LINE" | grep -oP '\(\K[^\)]+')
-    PORT=$(echo "$LIMIT_STR" | awk -F',' '{print $1}' | sed 's/[^0-9]//g')
-    LIMIT_GB=$(echo "$LIMIT_STR" | awk -F',' '{print $2}' | sed 's/[^0-9]//g')
-    DURATION_DAYS=$(echo "$LIMIT_STR" | awk -F',' '{print $3}' | sed 's/[^0-9]//g')
-    CREATED_DATE=$(echo "$LIMIT_STR" | awk -F',' '{print $4}' | grep -oP '\d{4}-\d{2}-\d{2}')
-
-    [[ -z "$PORT" || -z "$LIMIT_GB" || -z "$DURATION_DAYS" || -z "$CREATED_DATE" ]] && {
-        echo "$(date '+%Y-%m-%d %H:%M:%S'): Skipping $config: Invalid level format ($LEVEL_LINE)" >> "$LOG_FILE"
+    # 使用正则提取括号中的内容
+    INFO=$(echo "$LEVEL_LINE" | grep -oP '\(\K[0-9]+,[0-9]+GB, *[0-9]+day, *created: *[0-9\-]+')
+    
+    [[ -z "$INFO" ]] && {
+        echo "$(date '+%F %T'): Skipping $config: Invalid level format ($LEVEL_LINE)" >> "$LOG_FILE"
         continue
     }
 
-    USER="user${PORT}"
-    SERVICE_NAME="hysteria-${USER}"
+    PORT=$(echo "$INFO" | cut -d',' -f1)
+    LIMIT_GB=$(echo "$INFO" | cut -d',' -f2 | tr -dc '0-9')
+    DURATION_DAYS=$(echo "$INFO" | cut -d',' -f3 | tr -dc '0-9')
+    CREATED_DATE=$(echo "$INFO" | cut -d',' -f4 | sed 's/created: *//g' | xargs)
 
-    # Convert limit to bytes
-    LIMIT_BYTES=$((LIMIT_GB * 1024 * 1024 * 1024))
-
-    # Convert creation date to timestamp
+    # 转换为时间戳
     CREATED_TIMESTAMP=$(date -d "$CREATED_DATE" +%s 2>/dev/null)
-    if [[ -z "$CREATED_TIMESTAMP" ]]; then
-        echo "$(date '+%Y-%m-%d %H:%M:%S'): Skipping $SERVICE_NAME: Invalid creation date ($CREATED_DATE)" >> "$LOG_FILE"
-        continue
-    fi
 
-    # Calculate expiration timestamp
+    [[ -z "$PORT" || -z "$LIMIT_GB" || -z "$DURATION_DAYS" || -z "$CREATED_TIMESTAMP" ]] && {
+        echo "$(date '+%F %T'): Skipping $config: Missing values (PORT=$PORT, LIMIT=$LIMIT_GB, DAYS=$DURATION_DAYS, CREATED=$CREATED_DATE)" >> "$LOG_FILE"
+        continue
+    }
+
+    SERVICE_NAME="hysteria-user$PORT"
+    LIMIT_BYTES=$((LIMIT_GB * 1024 * 1024 * 1024))
     EXPIRY_TIMESTAMP=$((CREATED_TIMESTAMP + DURATION_DAYS * 86400))
 
-    # Get current traffic usage (bytes)
-    IN_BYTES=$(iptables -L INPUT -v -n | grep "udp dpt:$PORT" | awk '{print $2}' | head -1)
-    OUT_BYTES=$(iptables -L OUTPUT -v -n | grep "udp spt:$PORT" | awk '{print $2}' | head -1)
-    [[ -z "$IN_BYTES" || -z "$OUT_BYTES" ]] && {
-        echo "$(date '+%Y-%m-%d %H:%M:%S'): Skipping $SERVICE_NAME: No iptables rules for port $PORT" >> "$LOG_FILE"
-        continue
-    }
-
+    # 获取 iptables 中端口的流量统计（单位：字节）
+    IN_BYTES=$(iptables -nvx -L INPUT 2>/dev/null | grep "$PORT" | awk '{sum += $2} END {print sum}')
+    OUT_BYTES=$(iptables -nvx -L OUTPUT 2>/dev/null | grep "$PORT" | awk '{sum += $2} END {print sum}')
     TOTAL_BYTES=$((IN_BYTES + OUT_BYTES))
 
-    # Extract username and password from config
-    USERNAME=$(grep -E "^  - user: " "$config" | awk '{print $3}' | head -1)
-    PASSWORD=$(grep -E "^  - password: " "$config" | awk '{print $3}' | head -1)
-    [[ -z "$USERNAME" || -z "$PASSWORD" ]] && {
-        echo "$(date '+%Y-%m-%d %H:%M:%S'): Skipping $SERVICE_NAME: Missing username or password" >> "$LOG_FILE"
-        continue
-    }
-
-    # Check for expiration conditions
     EXPIRED=false
     REASON=""
 
@@ -218,25 +200,23 @@ for config in $CONFIG_DIR/user*.yaml; do
 
     if [ "$CURRENT_DATE" -ge "$EXPIRY_TIMESTAMP" ]; then
         EXPIRED=true
-        REASON="${REASON:+$REASON and }time limit expired"
+        REASON="time limit expired"
     fi
 
     if [ "$EXPIRED" = true ]; then
         ANY_EXPIRED=true
         systemctl stop "$SERVICE_NAME" 2>/dev/null
         systemctl disable "$SERVICE_NAME" 2>/dev/null
-        # Delete iptables rules
         iptables -D INPUT -p udp --dport "$PORT" -j ACCEPT 2>/dev/null
         iptables -D OUTPUT -p udp --sport "$PORT" -j ACCEPT 2>/dev/null
-        # Save iptables rules
         iptables-save > /etc/iptables/rules.v4 2>/dev/null
-        echo "$(date '+%Y-%m-%d %H:%M:%S'): $SERVICE_NAME (User: $USERNAME, Password: $PASSWORD, $LEVEL_LINE) stopped due to $REASON" >> "$LOG_FILE"
+        echo "$(date '+%F %T'): $SERVICE_NAME (port: $PORT) stopped due to $REASON" >> "$LOG_FILE"
     fi
 done
 
-# Log if no ports expired
+# 如果没有任何端口被停用
 if [ "$ANY_EXPIRED" = false ]; then
-    echo "$(date '+%Y-%m-%d %H:%M:%S'): No ports expired" >> "$LOG_FILE"
+    echo "$(date '+%F %T'): No ports expired" >> "$LOG_FILE"
 fi
 
 EOF
