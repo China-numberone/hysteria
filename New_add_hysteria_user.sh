@@ -142,38 +142,35 @@ LOG_FILE="/var/log/hysteria_limit.log"
 CURRENT_DATE=$(date +%s)
 ANY_EXPIRED=false
 
-# 确保日志文件存在
 [ ! -f "$LOG_FILE" ] && touch "$LOG_FILE"
+echo "----- $(date) -----" >> "$LOG_FILE"
 
-# 遍历所有用户配置
 for config in "$CONFIG_DIR"/user*.yaml; do
     [ ! -f "$config" ] && {
         echo "$(date): Skipping $config: File not found" >> "$LOG_FILE"
         continue
     }
 
-    # 提取包含 level 信息的行
     LEVEL_LINE=$(grep "# level" "$config")
-
     [[ -z "$LEVEL_LINE" ]] && {
         echo "$(date): Skipping $config: No level comment found" >> "$LOG_FILE"
         continue
     }
 
-    # 使用正则提取括号中的内容
     INFO=$(echo "$LEVEL_LINE" | grep -oP '\(.*?\)' | tr -d '()')
-
     [[ -z "$INFO" ]] && {
         echo "$(date): Skipping $config: Invalid level format ($LEVEL_LINE)" >> "$LOG_FILE"
         continue
     }
 
     PORT=$(echo "$INFO" | cut -d',' -f1)
-    LIMIT_GB=$(echo "$INFO" | cut -d',' -f2)
-    DURATION_DAYS=$(echo "$INFO" | cut -d',' -f3)
-    CREATED_DATE=$(echo "$INFO" | cut -d',' -f4)
+    LIMIT_GB_RAW=$(echo "$INFO" | cut -d',' -f2)
+    DURATION_RAW=$(echo "$INFO" | cut -d',' -f3)
+    CREATED_RAW=$(echo "$INFO" | cut -d',' -f4)
 
-    # 时间戳转换
+    LIMIT_GB=$(echo "$LIMIT_GB_RAW" | grep -oP '\d+')
+    DURATION_DAYS=$(echo "$DURATION_RAW" | grep -oP '\d+')
+    CREATED_DATE=$(echo "$CREATED_RAW" | grep -oP '\d{4}-\d{2}-\d{2}')
     CREATED_TIMESTAMP=$(date -d "$CREATED_DATE" +%s 2>/dev/null)
 
     [[ -z "$PORT" || -z "$LIMIT_GB" || -z "$DURATION_DAYS" || -z "$CREATED_TIMESTAMP" ]] && {
@@ -185,17 +182,18 @@ for config in "$CONFIG_DIR"/user*.yaml; do
     LIMIT_BYTES=$((LIMIT_GB * 1024 * 1024 * 1024))
     EXPIRY_TIMESTAMP=$((CREATED_TIMESTAMP + DURATION_DAYS * 86400))
 
-    # 获取流量信息（需要你自己实现）
-    IN_BYTES=0
-    OUT_BYTES=0
-    TOTAL_BYTES=$((IN_BYTES + OUT_BYTES))
+    # 计算端口流量（INPUT + OUTPUT）
+    USED_BYTES_INPUT=$(iptables -nvx -L INPUT | awk -v p=$PORT '$0 ~ "udp" && $0 ~ "dpt:"p {s+=$2} END{printf "%d", s}')
+    USED_BYTES_OUTPUT=$(iptables -nvx -L OUTPUT | awk -v p=$PORT '$0 ~ "udp" && $0 ~ "spt:"p {s+=$2} END{printf "%d", s}')
+    TOTAL_BYTES=$((USED_BYTES_INPUT + USED_BYTES_OUTPUT))
+    USED_GB=$(awk "BEGIN {printf \"%.2f\", $TOTAL_BYTES / (1024 * 1024 * 1024)}")
 
     EXPIRED=false
     REASON=""
 
     if [ "$TOTAL_BYTES" -ge "$LIMIT_BYTES" ]; then
         EXPIRED=true
-        REASON="traffic limit exceeded (${LIMIT_GB}GB)"
+        REASON="traffic limit exceeded ($USED_GB GB used / ${LIMIT_GB} GB)"
     fi
 
     if [ "$CURRENT_DATE" -ge "$EXPIRY_TIMESTAMP" ]; then
@@ -210,7 +208,11 @@ for config in "$CONFIG_DIR"/user*.yaml; do
         iptables -D INPUT -p udp --dport "$PORT" -j ACCEPT 2>/dev/null
         iptables -D OUTPUT -p udp --sport "$PORT" -j ACCEPT 2>/dev/null
         iptables-save > /etc/iptables/rules.v4 2>/dev/null
-        echo "$(date): $SERVICE_NAME (port: $PORT) stopped due to $REASON" >> "$LOG_FILE"
+        echo "$(date): ❌ $SERVICE_NAME (port: $PORT) stopped due to $REASON" >> "$LOG_FILE"
+        echo "Stopped user on port $PORT due to: $REASON"
+    else
+        echo "$(date): ✅ $SERVICE_NAME (port: $PORT) usage OK: ${USED_GB}GB / ${LIMIT_GB}GB" >> "$LOG_FILE"
+        echo "User on port $PORT: ${USED_GB}GB / ${LIMIT_GB}GB - OK"
     fi
 done
 
