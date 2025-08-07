@@ -1,4 +1,75 @@
 #!/bin/bash
+MAX_TRIES=3
+TRIES=0
+VALID_INPUT=0
+
+while [[ $TRIES -lt $MAX_TRIES ]]; do
+  echo "请选择用户等级:"
+  echo "1) trial（试用） - 3GB / 3天"
+  echo "2) basic（基础） - 30GB / 30天"
+  echo "3) pro（专业）   - 100GB / 90天"
+  echo "4) elite（精英） - 200GB / 120天"
+  echo "5) vip（尊贵）   - 500GB / 365天"
+  echo "6) svip（至尊）  - 1TB / 365天"
+  read -rp "请输入等级编号 (1-6): " LEVEL_NUM
+
+  case "$LEVEL_NUM" in
+    1)
+      LEVEL_NAME="trial"
+      LEVEL_SIZE="3GB"
+      LEVEL_DURATION="3day"
+      VALID_INPUT=1
+      break
+      ;;
+    2)
+      LEVEL_NAME="basic"
+      LEVEL_SIZE="30GB"
+      LEVEL_DURATION="30day"
+      VALID_INPUT=1
+      break
+      ;;
+    3)
+      LEVEL_NAME="pro"
+      LEVEL_SIZE="100GB"
+      LEVEL_DURATION="90day"
+      VALID_INPUT=1
+      break
+      ;;
+    4)
+      LEVEL_NAME="elite"
+      LEVEL_SIZE="200GB"
+      LEVEL_DURATION="120day"
+      VALID_INPUT=1
+      break
+      ;;
+    5)
+      LEVEL_NAME="vip"
+      LEVEL_SIZE="500GB"
+      LEVEL_DURATION="365day"
+      VALID_INPUT=1
+      break
+      ;;
+    6)
+      LEVEL_NAME="svip"
+      LEVEL_SIZE="1TB"
+      LEVEL_DURATION="365day"
+      VALID_INPUT=1
+      break
+      ;;
+    *)
+      echo "输入无效，请输入 1-6 之间的数字。"
+      ((TRIES++))
+      ;;
+  esac
+done
+
+if [[ $VALID_INPUT -ne 1 ]]; then
+  echo "输入无效超过三次，退出本次用户生成。"
+  exit 1
+fi
+
+CREATED_DATE=$(date +%Y-%m-%d)
+LEVEL_COMMENT="# level: $LEVEL_NAME ($LEVEL_SIZE, $LEVEL_DURATION, created: $CREATED_DATE)"
 
 # ========== 1. 基本参数 ==========
 PORT=$((RANDOM % 40000 + 20000))
@@ -11,6 +82,8 @@ LIMIT_BYTES=$((LIMIT_GB * 1024 * 1024 * 1024))
 mkdir -p /etc/hysteria
 
 cat > /etc/hysteria/${USER}.yaml <<EOF
+$LEVEL_COMMENT
+
 listen: '0.0.0.0:$PORT'
 
 auth:
