@@ -133,23 +133,84 @@ iptables -C INPUT -p udp --dport $PORT -j ACCEPT 2>/dev/null || iptables -I INPU
 iptables -C OUTPUT -p udp --sport $PORT -j ACCEPT 2>/dev/null || iptables -I OUTPUT -p udp --sport $PORT -j ACCEPT
 
 # ========== 6. 创建流量检测脚本 ==========
-MONITOR_SCRIPT="/etc/hysteria/limit_check_${USER}.sh"
+MONITOR_SCRIPT="/etc/hysteria/limit_check.sh"
 cat > $MONITOR_SCRIPT <<EOF
-#!/bin/bash
-PORT=$PORT
-USER=$USER
-LIMIT_BYTES=$LIMIT_BYTES
-SERVICE_NAME=hysteria-\$USER
 
-IN_BYTES=\$(iptables -L INPUT -v -n | grep "udp dpt:\$PORT" | awk '{print \$2}')
-OUT_BYTES=\$(iptables -L OUTPUT -v -n | grep "udp spt:\$PORT" | awk '{print \$2}')
-TOTAL=\$((IN_BYTES + OUT_BYTES))
+CONFIG_DIR="/etc/hysteria"
+LOG_FILE="/var/log/hysteria_limit.log"
+CURRENT_DATE=$(date +%s)  # Current timestamp in seconds
+ANY_EXPIRED=false
 
-if [ "\$TOTAL" -ge "\$LIMIT_BYTES" ]; then
-    systemctl stop \$SERVICE_NAME
-    systemctl disable \$SERVICE_NAME
-    echo "\$(date): \$SERVICE_NAME exceeded limit, stopped." >> /var/log/hysteria_limit.log
+# Create log file if it doesn't exist
+[ ! -f "$LOG_FILE" ] && touch "$LOG_FILE"
+
+# Traverse all configuration files
+for config in $CONFIG_DIR/user*.yaml; do
+    # Extract port number
+    PORT=$(basename "$config" | grep -oE '[0-9]{5}')
+    USER="user${PORT}"
+    SERVICE_NAME="hysteria-${USER}"
+
+    # Extract level line with comments (supporting colon)
+    LEVEL_LINE=$(grep -E "^# level:" "$config")
+    [[ -z "$LEVEL_LINE" ]] && continue  # Skip if no comment line
+
+    # Extract limit, duration, and creation date
+    LIMIT_STR=$(echo "$LEVEL_LINE" | grep -oP '\(\K[^\)]+')
+    LIMIT_GB=$(echo "$LIMIT_STR" | awk -F',' '{print $1}' | sed 's/[^0-9]//g')
+    DURATION_DAYS=$(echo "$LIMIT_STR" | awk -F',' '{print $2}' | sed 's/[^0-9]//g')
+    CREATED_DATE=$(echo "$LIMIT_STR" | awk -F',' '{print $3}' | grep -oP '\d{4}-\d{2}-\d{2}')
+
+    [[ -z "$LIMIT_GB" || -z "$DURATION_DAYS" || -z "$CREATED_DATE" ]] && continue
+
+    # Convert limit to bytes
+    LIMIT_BYTES=$((LIMIT_GB * 1024 * 1024 * 1024))
+
+    # Convert creation date to timestamp
+    CREATED_TIMESTAMP=$(date -d "$CREATED_DATE" +%s 2>/dev/null)
+    [[ -z "$CREATED_TIMESTAMP" ]] && continue
+
+    # Calculate expiration timestamp
+    EXPIRY_TIMESTAMP=$((CREATED_TIMESTAMP + DURATION_DAYS * 86400))
+
+    # Get current traffic usage (bytes)
+    IN_BYTES=$(iptables -L INPUT -v -n | grep "udp dpt:$PORT" | awk '{print $2}')
+    OUT_BYTES=$(iptables -L OUTPUT -v -n | grep "udp spt:$PORT" | awk '{print $2}')
+    [[ -z "$IN_BYTES" || -z "$OUT_BYTES" ]] && continue
+
+    TOTAL_BYTES=$((IN_BYTES + OUT_BYTES))
+
+    # Extract username and password from config
+    USERNAME=$(grep -E "^  - user: " "$config" | awk '{print $3}' | head -1)
+    PASSWORD=$(grep -E "^  - password: " "$config" | awk '{print $3}' | head -1)
+
+    # Check for expiration conditions
+    EXPIRED=false
+    REASON=""
+
+    if [ "$TOTAL_BYTES" -ge "$LIMIT_BYTES" ]; then
+        EXPIRED=true
+        REASON="traffic limit exceeded (${LIMIT_GB}GB)"
+    fi
+
+    if [ "$CURRENT_DATE" -ge "$EXPIRY_TIMESTAMP" ]; then
+        EXPIRED=true
+        REASON="${REASON:+$REASON and }time limit expired"
+    fi
+
+    if [ "$EXPIRED" = true ]; then
+        ANY_EXPIRED=true
+        systemctl stop "$SERVICE_NAME"
+        systemctl disable "$SERVICE_NAME"
+        echo "$(date '+%Y-%m-%d %H:%M:%S'): $SERVICE_NAME (User: $USERNAME, Password: $PASSWORD, $LEVEL_LINE) stopped due to $REASON" >> "$LOG_FILE"
+    fi
+done
+
+# Log if no ports expired
+if [ "$ANY_EXPIRED" = false ]; then
+    echo "$(date '+%Y-%m-%d %H:%M:%S'): No ports expired" >> "$LOG_FILE"
 fi
+
 EOF
 
 chmod +x $MONITOR_SCRIPT
