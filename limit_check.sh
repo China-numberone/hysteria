@@ -2,7 +2,6 @@
 MONITOR_SCRIPT="/etc/hysteria/limit_check.sh"
 cat > $MONITOR_SCRIPT <<EOF
 #!/bin/bash
-
 set -eo pipefail
 
 # ---------- 检测并安装 bc ----------
