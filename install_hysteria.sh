@@ -29,13 +29,8 @@ openssl req -x509 -newkey rsa:2048 -sha256 -days 3650 -nodes \
 # 写入配置文件（启用高并发 & 性能优化）
 cat > /etc/hysteria/config.yaml <<EOF
 
-listen: 0.0.0.0:443
-
-# listen: [0.0.0.0:443, '[::]:443']
-
-# listen: '[::]:443'  # 监听 IPv4 + IPv6
-# listen: '0.0.0.0:443'
-
+# listen: 0.0.0.0:443
+listen: '[::]:443'  # 监听 IPv4 + IPv6
 
 auth:
   type: userpass
@@ -139,20 +134,15 @@ IPV4=$(ip -4 addr show scope global | grep inet | head -n1 | awk '{print $2}' | 
 # 提取端口号
 PORT=$(grep '^listen:' /etc/hysteria/config.yaml | grep -oE '[0-9]+$')
 
-
 # 提取认证密码
-# PASSWORD=$(awk '/^auth:/,/^$/{if($1=="userpass:"){print $2}}' /etc/hysteria/config.yaml)
-# PASSWORD=$(awk '/userpass:/ {in_userpass=1; next} /^[^[:space:]]/ {in_userpass=0} in_userpass && /^[[:space:]]*[a-zA-Z0-9_-]+:[[:space:]]*/ { gsub(/^[ \t]+/, "", $0); last=$0 } END { print last }' /etc/hysteria/config.yaml)
 PASSWORD=$(awk '/userpass:/ {in_userpass=1; next} /^[^[:space:]]/ {in_userpass=0} in_userpass && /^[[:space:]]*[a-zA-Z0-9_-]+:[[:space:]]*/ { gsub(/^[ \t]+/, "", $0); last=$0 } END { gsub(/[[:space:]]+/, "", last); print last }' /etc/hysteria/config.yaml)
-
 
 systemctl status hysteria --no-pager
 
 # 拼接输出
-#echo "[$IPV6]:$PORT@$PASSWORD"
-echo -e "\n客户端IPV6连接信息：\nhy2://$PASSWORD@[$IPV6]:$PORT?insecure=1&sni=bing.com#Hysteria2-IPv6"
+echo -e "\n客户端IPV6连接信息：\nhy2://$PASSWORD@[$IPV6]:$PORT?insecure=1&sni=bing.com#Hysteria2-$IPV6\n"
 
-echo -e "\n客户端IPV4连接信息：\nhy2://$PASSWORD@$IPV4:$PORT?insecure=1&sni=bing.com#Hysteria2-IPv6"
+echo -e "\n客户端IPV4连接信息：\nhy2://$PASSWORD@$IPV4:$PORT?insecure=1&sni=bing.com#Hysteria2-$IPV4\n"
 
 # 输出状态
 echo -e "\n✅ Hysteria2 已部署完毕，使用端口 443，自签 TLS，已开启高并发优化。"
