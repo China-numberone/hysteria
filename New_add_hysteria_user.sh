@@ -104,11 +104,7 @@ iptables -C OUTPUT -p udp --sport $PORT -j ACCEPT 2>/dev/null || iptables -I OUT
 IPV4=$(ip -4 addr show scope global | grep inet | head -n1 | awk '{print $2}' | cut -d'/' -f1)
 
 echo -e "\n✅ 已部署 Hysteria2 测试用户"
-echo -e "用户名：$USER"
-echo -e "端口号：$PORT"
-echo -e "密码：$PASS"
-echo -e "限额：${LIMIT_GB} GB\n"
 echo -e "连接信息："
-echo -e "hy2://$USER:$PASS@$IPV4:$PORT?insecure=1&sni=bing.com#Hysteria2-${USER}\n"
+echo -e "hy2://$USER:$PASS@$IPV4:$PORT?insecure=1&sni=bing.com#$LEVEL_COMMENT\n"
 
 systemctl status hysteria-${USER} --no-pager
