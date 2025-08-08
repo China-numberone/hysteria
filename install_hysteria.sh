@@ -134,7 +134,7 @@ IPV4=$(ip -4 addr show scope global | grep inet | head -n1 | awk '{print $2}' | 
 PORT=$(grep '^listen:' /etc/hysteria/config.yaml | grep -oE '[0-9]+$')
 
 # 提取认证密码
-PASSWORD=$(awk '/userpass:/ {in_userpass=1; next} /^[^[:space:]]/ {in_userpass=0} in_userpass && /^[[:space:]]*[a-zA-Z0-9_-]+:[[:space:]]*/ { gsub(/^[ \t]+/, "", $0); last=$0 } END { gsub(/[[:space:]]+/, "", last); print last }' /etc/hysteria/config.yaml)
+PASSWORD=$(grep -E '^[[:space:]]*main:' /etc/hysteria/config.yaml | sed -E 's/[[:space:]]//g')
 
 systemctl status hysteria --no-pager
 
