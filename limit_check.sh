@@ -1,6 +1,6 @@
 # ========== 6. 创建流量检测脚本 ==========
-MONITOR_SCRIPT="/etc/hysteria/limit_check.sh"
-cat > $MONITOR_SCRIPT <<EOF
+# MONITOR_SCRIPT="/etc/hysteria/limit_check.sh"
+# cat > $MONITOR_SCRIPT <<EOF
 #!/bin/bash
 set -eo pipefail
 
@@ -104,7 +104,7 @@ if [ "$ANY_EXPIRED" = false ]; then
   echo "$(date): No ports expired" >> "$LOG_FILE"
 fi
 
-EOF
+# EOF
 
 # chmod +x /etc/hysteria/limit_check.sh
 
