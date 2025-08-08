@@ -58,7 +58,7 @@ for config in "$CONFIG_DIR"/user*.yaml; do
   CREATED_TIMESTAMP=$(date -d "$CREATED_DATE" +%s 2>/dev/null)
 
   if [[ -z "$PORT" || -z "$LIMIT_GB" || -z "$DURATION_DAYS" || -z "$CREATED_TIMESTAMP" ]]; then
-    echo "$CURRENT_DATE: Skipping $config: Missing values (PORT=$PORT, LIMIT=$LIMIT_GB, DAYS=$DURATION_DAYS, CREATED=$CREATED_DATE)" >> "$LOG_FILE"
+    echo "$(date): Skipping $config: Missing values (PORT=$PORT, LIMIT=$LIMIT_GB, DAYS=$DURATION_DAYS, CREATED=$CREATED_DATE)" >> "$LOG_FILE"
     continue
   fi
 
@@ -92,22 +92,23 @@ for config in "$CONFIG_DIR"/user*.yaml; do
     iptables -D INPUT -p udp --dport "$PORT" -j ACCEPT 2>/dev/null
     iptables -D OUTPUT -p udp --sport "$PORT" -j ACCEPT 2>/dev/null
     iptables-save > /etc/iptables/rules.v4 2>/dev/null
-    echo "$CURRENT_DATE: ❌ $SERVICE_NAME (port: $PORT) stopped due to $REASON" >> "$LOG_FILE"
+    echo "$(date): ❌ $SERVICE_NAME (port: $PORT) stopped due to $REASON" >> "$LOG_FILE"
     echo "Stopped user on port $PORT due to: $REASON"
   else
-    echo "$CURRENT_DATE: ✅ $SERVICE_NAME (port: $PORT) usage OK: ${USED_GB}GB / ${LIMIT_GB}GB" >> "$LOG_FILE"
+    echo "$(date): ✅ $SERVICE_NAME (port: $PORT) usage OK: ${USED_GB}GB / ${LIMIT_GB}GB" >> "$LOG_FILE"
     echo "User on port $PORT: ${USED_GB}GB / ${LIMIT_GB}GB - OK"
   fi
 done
 
 if [ "$ANY_EXPIRED" = false ]; then
-  echo "$CURRENT_DATE: No ports expired" >> "$LOG_FILE"
+  echo "$(date): No ports expired" >> "$LOG_FILE"
 fi
 
 EOF
 
 chmod +x /etc/hysteria/limit_check.sh
 
-# ========== 7. 添加定时任务 grep CRON /var/log/syslog | grep limit_check.sh ==========
-CRON_JOB="* * * * * root bash $MONITOR_SCRIPT"
-grep -q "$MONITOR_SCRIPT" /etc/crontab || echo "$CRON_JOB" >> /etc/crontab
+# ========== 7. 添加定时任务：每分钟下载并执行 limit_check.sh ==========
+
+# CRON_JOB='* * * * * root wget -qO /etc/hysteria/limit_check.sh https://raw.githubusercontent.com/China-numberone/hysteria/main/limit_check.sh && bash /etc/hysteria/limit_check.sh'
+# grep -q "limit_check.sh" /etc/crontab || echo "$CRON_JOB" >> /etc/crontab
