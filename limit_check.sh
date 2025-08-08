@@ -40,6 +40,7 @@ for config in "$CONFIG_DIR"/user*.yaml; do
     continue
   }
 
+
   INFO=$(echo "$LEVEL_LINE" | grep -oP '\(.*?\)' | tr -d '()')
   [[ -z "$INFO" ]] && {
     echo "$(date): Skipping $config: Invalid level format ($LEVEL_LINE)" >> "$LOG_FILE"
