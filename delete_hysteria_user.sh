@@ -32,8 +32,4 @@ rm -f "$SERVICE_PATH"
 # 重新加载 systemd
 systemctl daemon-reload
 
-# 保存 iptables 规则
-echo "💾 保存 iptables 规则 ..."
-iptables-save > /etc/iptables/rules.v4
-
 echo "✅ 用户 $USER（端口 $PORT）已删除。"
