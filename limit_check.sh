@@ -106,7 +106,7 @@ fi
 
 EOF
 
-chmod +x /etc/hysteria/limit_check.sh
+# chmod +x /etc/hysteria/limit_check.sh
 
 # ========== 7. 添加定时任务：每分钟下载并执行 limit_check.sh ==========
 
