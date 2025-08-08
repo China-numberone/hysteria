@@ -5,12 +5,12 @@ VALID_INPUT=0
 
 # 等级信息数组
 LEVEL_NAMES=("trial" "basic" "pro" "elite" "vip" "svip")
-LEVEL_SIZES=("3GB" "30GB" "100GB" "200GB" "500GB" "1000GB")
-LEVEL_DURATIONS=("3day" "30day" "90day" "120day" "365day" "365day")
+LEVEL_SIZES=("1GB" "30GB" "100GB" "200GB" "500GB" "1000GB")
+LEVEL_DURATIONS=("1day" "30day" "90day" "120day" "365day" "365day")
 
 while [[ $TRIES -lt $MAX_TRIES ]]; do
   echo "请选择用户等级:"
-  echo "1) trial（试用） - 3GB / 3天"
+  echo "1) trial（试用） - 1GB / 1天"
   echo "2) basic（基础） - 30GB / 30天"
   echo "3) pro（专业）   - 100GB / 90天"
   echo "4) elite（精英） - 200GB / 120天"
