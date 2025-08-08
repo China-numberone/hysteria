@@ -3,6 +3,8 @@ MONITOR_SCRIPT="/etc/hysteria/limit_check.sh"
 cat > $MONITOR_SCRIPT <<EOF
 #!/bin/bash
 
+set -eo pipefail
+
 # ---------- 检测并安装 bc ----------
 if ! command -v bc >/dev/null 2>&1; then
   echo "$(date '+%F %T'): bc not found, installing..."
