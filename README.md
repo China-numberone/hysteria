@@ -1,3 +1,5 @@
+bash <(wget -qO- https://raw.githubusercontent.com/Jonnii-Laii/xray-autoinstall/main/VLESS%20+%20Reality.sh)
+
 # hysteria
 bash <(wget -qO- https://raw.githubusercontent.com/Jonnii-Laii/hysteria/main/install_hysteria.sh)
 
