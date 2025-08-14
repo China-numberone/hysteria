@@ -30,6 +30,7 @@ openssl req -x509 -newkey rsa:2048 -sha256 -days 3650 -nodes \
 cat > /etc/hysteria/config.yaml <<EOF
 
 listen: 0.0.0.0:443
+protocol: udp
 
 auth:
   type: userpass
