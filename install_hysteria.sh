@@ -45,7 +45,7 @@ masquerade:
   proxy:
     url: https://www.bilibili.com
     rewriteHost: true
-    protocol: https
+    # protocol: https
 
 quic:
   initStreamReceiveWindow: 8192000
