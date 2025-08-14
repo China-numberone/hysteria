@@ -29,8 +29,7 @@ openssl req -x509 -newkey rsa:2048 -sha256 -days 3650 -nodes \
 # 写入配置文件（启用高并发 & 性能优化）
 cat > /etc/hysteria/config.yaml <<EOF
 
-listen: 0.0.0.0:443
-protocol: udp
+listen: 0.0.0.0:443/udp
 
 auth:
   type: userpass
@@ -45,7 +44,7 @@ masquerade:
   proxy:
     url: https://www.bilibili.com
     rewriteHost: true
-    # protocol: https
+    protocol: https
 
 quic:
   initStreamReceiveWindow: 8192000
