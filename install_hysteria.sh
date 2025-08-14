@@ -29,7 +29,9 @@ openssl req -x509 -newkey rsa:2048 -sha256 -days 3650 -nodes \
 # 写入配置文件（启用高并发 & 性能优化）
 cat > /etc/hysteria/config.yaml <<EOF
 
-listen: 0.0.0.0:443
+# listen: 0.0.0.0:443
+
+listen: :443
 
 auth:
   type: userpass
@@ -77,15 +79,20 @@ systemctl enable hysteria
 systemctl restart hysteria
 
 cat >> /etc/sysctl.conf <<EOF
-
-# 文件描述符限制（建议更大，适配高并发）
+# =========================
+# 文件描述符限制（适配高并发）
+# =========================
 fs.file-max = 1048576
 fs.nr_open = 1048576
 
+# =========================
 # 连接跟踪表大小（适用于代理、NAT 等）
+# =========================
 net.netfilter.nf_conntrack_max = 262144
 
-# IPv6 转发和邻居表优化
+# =========================
+# IPv6 优化
+# =========================
 net.ipv6.conf.all.forwarding = 1
 net.ipv6.conf.default.forwarding = 1
 net.ipv6.neigh.default.gc_thresh1 = 1024
@@ -93,31 +100,49 @@ net.ipv6.neigh.default.gc_thresh2 = 2048
 net.ipv6.neigh.default.gc_thresh3 = 4096
 net.ipv6.icmp.ratelimit = 1000
 
-# IPv4 网络优化参数
+# =========================
+# 通用网络优化
+# =========================
+net.core.default_qdisc = fq
+net.ipv4.tcp_congestion_control = bbr
+net.core.netdev_max_backlog = 5000
+net.ipv4.ip_local_port_range = 10240 65535
 
-net.ipv4.ip_forward = 1
+# =========================
+# TCP 参数优化
+# =========================
+net.ipv4.tcp_fastopen = 3
+net.ipv4.tcp_mtu_probing = 1
+net.ipv4.tcp_fin_timeout = 15
+net.ipv4.tcp_tw_reuse = 1
+net.ipv4.tcp_tw_recycle = 0
+net.ipv4.tcp_slow_start_after_idle = 0
 net.ipv4.tcp_syncookies = 1
+
+# =========================
+# 安全与路由设置
+# =========================
+net.ipv4.ip_forward = 1
 net.ipv4.conf.all.accept_source_route = 0
 net.ipv4.conf.default.accept_source_route = 0
 net.ipv4.conf.all.accept_redirects = 0
 net.ipv4.conf.default.accept_redirects = 0
 net.ipv4.conf.all.rp_filter = 1
 net.ipv4.conf.default.rp_filter = 1
-net.ipv4.tcp_fin_timeout = 15
-net.ipv4.tcp_tw_reuse = 1
-net.ipv4.tcp_tw_recycle = 0
 
-# TCP 内存和缓冲区优化
-net.core.rmem_max = 16777216
-net.core.wmem_max = 16777216
+# =========================
+# 缓冲区 & 内存优化
+# =========================
+# TCP 缓冲区
 net.ipv4.tcp_rmem = 4096 87380 16777216
 net.ipv4.tcp_wmem = 4096 65536 16777216
-
-# 可用端口范围扩大
-net.ipv4.ip_local_port_range = 10240 65535
-
-# 接收队列长度
-net.core.netdev_max_backlog = 5000
+# UDP 缓冲区
+net.ipv4.udp_mem = 4096 87380 16777216
+net.ipv4.udp_rmem_min = 16384
+net.ipv4.udp_wmem_min = 16384
+# 系统最大缓冲区
+net.core.rmem_max = 16777216
+net.core.wmem_max = 16777216
 
 EOF
 
