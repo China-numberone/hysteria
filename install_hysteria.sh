@@ -47,14 +47,6 @@ masquerade:
     url: https://www.bilibili.com
     rewriteHost: true
     protocol: https
-
-quic:
-  initStreamReceiveWindow: 8192000
-  maxStreamReceiveWindow: 16384000
-  initConnReceiveWindow: 8192000
-  maxConnReceiveWindow: 16384000
-  maxIncomingStreams: 256
-  maxIncomingUniStreams: 256
   
 EOF
 
@@ -105,7 +97,7 @@ net.ipv6.icmp.ratelimit = 1000
 # =========================
 net.core.default_qdisc = fq
 net.ipv4.tcp_congestion_control = bbr
-net.core.netdev_max_backlog = 5000
+net.core.netdev_max_backlog = 8192
 net.ipv4.ip_local_port_range = 10240 65535
 
 # =========================
@@ -136,13 +128,37 @@ net.ipv4.conf.default.rp_filter = 1
 # TCP 缓冲区
 net.ipv4.tcp_rmem = 4096 87380 16777216
 net.ipv4.tcp_wmem = 4096 65536 16777216
-# UDP 缓冲区
-net.ipv4.udp_mem = 4096 87380 16777216
-net.ipv4.udp_rmem_min = 16384
-net.ipv4.udp_wmem_min = 16384
+
+# UDP 缓冲区（扩展优化）
+net.ipv4.udp_mem = 65536 131072 33554432
+net.ipv4.udp_rmem_min = 32768
+net.ipv4.udp_wmem_min = 32768
+
 # 系统最大缓冲区
-net.core.rmem_max = 16777216
-net.core.wmem_max = 16777216
+net.core.rmem_default = 262144
+net.core.wmem_default = 262144
+net.core.rmem_max = 33554432
+net.core.wmem_max = 33554432
+
+# =========================
+# UDP 高并发 & 低丢包专项优化
+# =========================
+# 单个 socket 接收队列最大长度
+net.core.optmem_max = 25165824
+net.core.netdev_budget = 600
+net.core.netdev_budget_usecs = 8000
+
+# 避免 UDP 包被强行丢弃
+net.ipv4.udp_max_err_queue = 4096
+net.ipv4.udp_rmem_min = 65536
+net.ipv4.udp_wmem_min = 65536
+
+# =========================
+# 额外建议
+# =========================
+# 增大队列长度，减少丢包
+net.core.somaxconn = 8192
+net.ipv4.udp_rfc2460 = 1
 
 EOF
 
