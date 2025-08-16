@@ -64,7 +64,7 @@ tls:
 masquerade:
   type: proxy
   proxy:
-    url: https://www.bilibili.com
+    url: https://www.bing.com
     rewriteHost: true
     protocol: https
 
